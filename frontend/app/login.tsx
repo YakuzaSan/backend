@@ -11,19 +11,22 @@ export default function LoginPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         try {
-            const response = await fetch("http://localhost:8080/api/login", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({ email, password }),
             });
 
-            if (response.ok) {
-                const text = await response.text();
-                setMessage(text);
+            const data = await response.json();
+
+            if (response.ok && !data.error) {
+                setMessage("Login erfolgreich!");
                 setTimeout(() => {
                     navigate("/dashboard");
                 }, 500);
+            } else {
+                setMessage(data.error || "Login fehlgeschlagen");
             }
         } catch (error) {
             console.error("Fetch error:", error);
@@ -34,7 +37,7 @@ export default function LoginPage() {
     function handleGitHubLogin() {
         // Spring Boot's automatischer OAuth2 Endpoint
         // Spring leitet automatisch zu GitHub weiter und behandelt den kompletten OAuth Flow
-        window.location.href = "http://localhost:8080/oauth2/authorization/github";
+        window.location.href = `${import.meta.env.VITE_API_URL}/oauth2/authorization/github`;
     }
 
     return (

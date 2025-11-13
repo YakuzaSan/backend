@@ -47,57 +47,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        // http ist ein Builder-Objekt - wir konfigurieren es Schritt für Schritt
         http
-                // CSRF (Cross-Site Request Forgery) Protection
-                // csrf -> csrf.disable(): Lambda-Ausdruck (Java 8+)
-                // Wir deaktivieren CSRF weil:
-                // 1. Wir verwenden stateless REST API (keine Sessions für normale Requests)
-                // 2. OAuth2 hat eigenen CSRF-Schutz (State Parameter)
-                // ACHTUNG: In Produktion nur deaktivieren wenn du weißt was du tust!
-                // Docs: https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html
                 .csrf(csrf -> csrf.disable())
-
-                // CORS (Cross-Origin Resource Sharing) aktivieren
-                // cors -> cors.configurationSource(...): Lambda-Ausdruck
-                // Wir sagen: "Verwende die CORS-Config von corsConfigurationSource() Methode"
-                // Ohne CORS: Browser blockiert Requests von localhost:5173 zu localhost:8080
-                // Docs: https://docs.spring.io/spring-security/reference/servlet/integrations/cors.html
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // authorizeHttpRequests: Definiert welche URLs geschützt sind
-                // auth -> auth...: Lambda-Ausdruck mit den Regeln
                 .authorizeHttpRequests(auth -> auth
-                        // requestMatchers: Welche URL-Patterns sollen diese Regel bekommen?
-                        // permitAll(): Diese URLs sind OHNE Login erreichbar
-                        // "/" = Homepage
-                        // "/api/login" = Email/Password Login Endpoint
-                        // "/error" = Spring's Error Page
-                        // "/webjars/**" = JavaScript/CSS Libraries (falls verwendet)
-                        // Docs: https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html
-                        .requestMatchers("/", "/api/login", "/error", "/webjars/**").permitAll()
-
-                        // anyRequest().authenticated(): ALLE anderen URLs brauchen Login!
-                        // Beispiel: /api/user ist geschützt, nur eingeloggte User können darauf zugreifen
+                        .requestMatchers("/", "/api/login", "/api/logout", "/api/user", "/error", "/webjars/**").permitAll()
                         .anyRequest().authenticated()
                 )
-
-                // oauth2Login: Aktiviert OAuth2 Login (GitHub, Google, Facebook, etc.)
-                // Spring erstellt automatisch:
-                // - /oauth2/authorization/{registrationId} (startet OAuth Flow)
-                // - /login/oauth2/code/{registrationId} (Callback von OAuth Provider)
-                // oauth2 -> oauth2...: Lambda-Ausdruck für OAuth2-Konfiguration
-                // Docs: https://docs.spring.io/spring-security/reference/servlet/oauth2/login/core.html
                 .oauth2Login(oauth2 -> oauth2
-                        // successHandler: Was passiert nach erfolgreichem OAuth2 Login?
-                        // Wir verwenden unseren customSuccessHandler() (siehe unten)
-                        // Default wäre: Weiterleitung zu "/"
-                        // Wir wollen aber: Weiterleitung zu Frontend Dashboard
                         .successHandler(customSuccessHandler())
                 );
 
-        // http.build(): Baut die finale SecurityFilterChain aus unserer Konfiguration
-        // Diese Chain wird dann auf ALLE HTTP-Requests angewendet
         return http.build();
     }
 
@@ -107,44 +67,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        // CorsConfiguration: Objekt das die CORS-Regeln enthält
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // setAllowedOrigins: Von welchen Domains dürfen Requests kommen?
-        // Arrays.asList(...): Erstellt eine List mit einem Element
-        // "http://localhost:5173": Unser React Frontend
-        // WICHTIG: In Produktion hier die echte Domain eintragen!
-        // Docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-
-        // setAllowedMethods: Welche HTTP-Methoden sind erlaubt?
-        // GET: Daten abrufen
-        // POST: Daten senden (z.B. Login)
-        // PUT: Daten aktualisieren
-        // DELETE: Daten löschen
-        // OPTIONS: Preflight-Request (Browser fragt vor dem echten Request)
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // setAllowedHeaders: Welche HTTP-Headers darf das Frontend senden?
-        // "*": Alle Headers erlaubt
-        // Beispiele: Content-Type, Authorization, X-Custom-Header, etc.
         configuration.setAllowedHeaders(Arrays.asList("*"));
-
-        // setAllowCredentials: Dürfen Cookies/Sessions mitgesendet werden?
-        // true: Ja, Cookies werden zwischen Frontend und Backend geteilt
-        // WICHTIG für: Sessions, OAuth2 Cookies, CSRF Tokens
-        // Docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(Arrays.asList("Set-Cookie"));
 
-        // UrlBasedCorsConfigurationSource: Wendet CORS-Config auf URL-Patterns an
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
-        // registerCorsConfiguration: Registriert unsere CORS-Config
-        // "/**": Für ALLE URLs (/** = alle Pfade und Unterpfade)
-        // configuration: Die CORS-Regeln von oben
         source.registerCorsConfiguration("/**", configuration);
 
-        // Gibt die CORS-Quelle zurück, die Spring dann verwendet
         return source;
     }
 

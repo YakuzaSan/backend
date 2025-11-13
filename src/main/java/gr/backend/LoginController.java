@@ -1,77 +1,49 @@
 package gr.backend;
 
-// Spring Web Annotations für REST Controllers
-// Siehe GithubController.java für detaillierte Erklärungen
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-// @RestController: Markiert diese Klasse als REST API Controller
-// Gibt JSON/XML zurück (nicht HTML)
+import jakarta.servlet.http.HttpSession;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
-
-// @RequestMapping: Basis-URL für alle Endpoints
-// "/api": Alle Methoden haben URLs die mit /api/ beginnen
 @RequestMapping("/api")
-
-// @CrossOrigin: CORS-Konfiguration
-// Erlaubt Requests vom Frontend (localhost:5173)
-// allowCredentials = "true": Cookies/Sessions werden geteilt
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class LoginController {
 
-    // @PostMapping: Diese Methode behandelt HTTP POST Requests
-    // "/login": Die URL ist /api/login
-    // Dieser Endpoint behandelt Email/Password Login
     @PostMapping("/login")
+    public Map<String, Object> login(@RequestBody LoginRequest request, HttpSession session) {
+        Map<String, Object> response = new HashMap<>();
 
-    // Rückgabetyp: String wird als Text zurückgegeben
-    // (Könnte man zu JSON ändern für bessere API)
-    //
-    // @RequestBody LoginRequest request:
-    // - @RequestBody: Spring konvertiert JSON aus dem Request-Body zu Java-Objekt
-    // - LoginRequest: Unsere eigene Klasse (siehe unten)
-    // - request: Variable-Name
-    //
-    // WIE funktioniert das?
-    // 1. Frontend sendet POST Request mit JSON: {"email": "...", "password": "..."}
-    // 2. Spring konvertiert JSON automatisch zu LoginRequest-Objekt
-    // 3. Spring ruft diese Methode mit dem Objekt auf
-    // 4. Wir können request.getEmail() und request.getPassword() verwenden
-    //
-    // Docs: https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/requestbody.html
-    public String login(@RequestBody LoginRequest request) {
-
-        // ACHTUNG: DIES IST NICHT SICHER!
-        // Hardcoded Credentials sind nur für Entwicklung/Testing!
-        //
-        // .equals(): Vergleicht zwei Strings
-        // "test@example.com".equals(request.getEmail()): Ist die Email korrekt?
-        // "1234".equals(request.getPassword()): Ist das Passwort korrekt?
-        // &&: Logisches UND - beide Bedingungen müssen wahr sein
-        //
-        // WARUM .equals() und nicht ==?
-        // == vergleicht Objekt-Referenzen (Speicheradressen)
-        // .equals() vergleicht den Inhalt der Strings
-        // Docs: https://docs.oracle.com/javase/tutorial/java/data/comparestrings.html
         if ("test@example.com".equals(request.getEmail()) && "1234".equals(request.getPassword())) {
+            Collection<GrantedAuthority> authorities = new ArrayList<>();
+            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+            
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    request.getEmail(),
+                    request.getPassword(),
+                    authorities
+            );
+            
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            securityContext.setAuthentication(authentication);
+            SecurityContextHolder.setContext(securityContext);
+            
+            session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
 
-            // Login erfolgreich!
-            // Gibt einfachen String zurück
-            // PROBLEM: Keine Session wird erstellt, keine Authentifizierung!
-            // User ist NICHT wirklich eingeloggt im Spring Security Sinne
-            return "Login erfolgreich!";
+            response.put("message", "Login erfolgreich!");
+            response.put("email", request.getEmail());
+            return response;
         } else {
-
-            // Login fehlgeschlagen!
-            // throw new RuntimeException: Wirft eine Exception
-            // Spring fängt die Exception und gibt HTTP 500 Error zurück
-            //
-            // BESSER wäre:
-            // - HTTP 401 Unauthorized zurückgeben
-            // - JSON Error-Response
-            // - Logging des fehlgeschlagenen Login-Versuchs
-            //
-            // Docs: https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-exceptionhandler.html
-            throw new RuntimeException("Ungültige Anmeldedaten");
+            response.put("error", "Ungültige Anmeldedaten");
+            return response;
         }
     }
 
