@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Outlet } from "react-router";
+import { api } from "./utils/api";
 
 interface User {
     name?: string;
@@ -15,9 +16,8 @@ export default function Dashboard() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_API_URL}/api/user`, {
-            credentials: "include",
-        })
+        api
+            .get("/api/user")
             .then((res) => res.json())
             .then((data) => {
                 if (data.error) {
@@ -31,10 +31,7 @@ export default function Dashboard() {
 
     async function handleLogout() {
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/logout`, {
-                method: "POST",
-                credentials: "include",
-            });
+            await api.logout();
             setUser(null);
             navigate("/");
         } catch (error) {

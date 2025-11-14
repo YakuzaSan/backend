@@ -1,87 +1,123 @@
-# Welcome to React Router!
+# Email/Password & GitHub OAuth Authentication System
 
-A modern, production-ready template for building full-stack React applications using React Router.
-
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+Full-stack authentication system with Spring Boot backend and React Router frontend.
 
 ## Features
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- ✅ Email/Password registration & login with BCrypt hashing
+- ✅ GitHub OAuth2 integration
+- ✅ Session-based authentication with Spring Security
+- ✅ Protected dashboard routes
+- ✅ Responsive UI with Tailwind CSS
+- ✅ TypeScript for type safety
 
-## Getting Started
+## Tech Stack
+
+**Backend:**
+- Spring Boot 3.5.7
+- Spring Security with OAuth2
+- Supabase (User storage)
+- H2 Database (Sessions)
+
+**Frontend:**
+- React 19.1.1 with TypeScript
+- React Router 7.9.2
+- Tailwind CSS 4.1.13
+- Vite 7.1.7
+
+## Setup & Development
+
+### Prerequisites
+- Node.js 20+
+- Java 21+
+- Gradle
 
 ### Installation
 
-Install the dependencies:
-
 ```bash
+# Backend
+cd backend
+./gradlew build
+
+# Frontend
+cd frontend
 npm install
+```
+
+### Environment Variables
+
+**Backend:** `src/main/resources/application.properties`
+```properties
+supabase.url=<YOUR_SUPABASE_URL>
+supabase.api-key=<YOUR_SUPABASE_API_KEY>
+spring.security.oauth2.client.registration.github.client-id=<YOUR_GITHUB_CLIENT_ID>
+spring.security.oauth2.client.registration.github.client-secret=<YOUR_GITHUB_SECRET>
+```
+
+**Frontend:** `frontend/.env`
+```env
+VITE_API_URL=http://localhost:8080
 ```
 
 ### Development
 
-Start the development server with HMR:
-
 ```bash
+# Terminal 1: Backend (port 8080)
+cd backend
+./gradlew bootRun
+
+# Terminal 2: Frontend (port 5173)
+cd frontend
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+Visit `http://localhost:5173`
 
-## Building for Production
+## API Endpoints
 
-Create a production build:
+- `POST /api/register` - Register with email/password
+- `POST /api/login` - Login with email/password
+- `GET /api/user` - Get current user info (authenticated)
+- `POST /api/logout` - Logout
+- `GET /oauth2/authorization/github` - GitHub OAuth redirect
+
+## Project Structure
+
+```
+frontend/
+├── app/
+│   ├── dashboard.tsx      # Protected dashboard
+│   ├── login.tsx          # Login page
+│   ├── register.tsx       # Registration page
+│   ├── utils/
+│   │   ├── api.ts         # API client
+│   │   └── csrf.ts        # CSRF token utilities
+│   └── routes.ts
+├── package.json
+└── vite.config.ts
+```
+
+## Security Features
+
+- **CSRF Protection**: Cookie-based CSRF tokens
+- **Password Hashing**: BCrypt with Spring Security
+- **Session Management**: JDBC-based sessions
+- **CORS**: Restricted to localhost:5173
+- **OAuth2**: GitHub identity provider
+
+## Build for Production
 
 ```bash
+# Backend
+./gradlew build -x test
+
+# Frontend
 npm run build
+npm start
 ```
 
 ## Deployment
 
-### Docker Deployment
+Supports Docker, AWS, Google Cloud, Azure, Digital Ocean, Railway, Fly.io, and more.
 
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+See deployment configs in root directory.

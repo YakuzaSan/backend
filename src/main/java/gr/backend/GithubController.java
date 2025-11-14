@@ -1,9 +1,5 @@
 package gr.backend;
 
-// @AuthenticationPrincipal: Spring Annotation um den aktuell eingeloggten User zu bekommen
-// Spring injiziert automatisch das User-Objekt in die Controller-Methode
-// Docs: https://docs.spring.io/spring-security/reference/servlet/integrations/mvc.html#mvc-authentication-principal
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -14,21 +10,18 @@ import jakarta.servlet.http.HttpSession;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-// @RestController: Markiert diese Klasse als REST API Controller
-// Unterschied zu @Controller:
-// - @Controller: Gibt HTML-Views zurück (Thymeleaf, JSP, etc.)
-// - @RestController: Gibt JSON/XML zurück (REST API)
-// Spring konvertiert automatisch Java-Objekte zu JSON
-// Docs: https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-restcontroller.html
 @RestController
 @RequestMapping("/api")
 public class GithubController {
 
-    // @GetMapping: Diese Methode behandelt HTTP GET Requests
-    // "/user": Die URL ist /api/user (wegen @RequestMapping("/api") oben)
-    // Dieser Endpoint gibt die Daten des eingeloggten GitHub-Users zurück
-    // Docs: https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/requestmapping.html
+    private final SupabaseService supabaseService;
+
+    public GithubController(SupabaseService supabaseService) {
+        this.supabaseService = supabaseService;
+    }
+
     @GetMapping("/user")
     public Map<String, Object> getUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -41,18 +34,49 @@ public class GithubController {
 
         Object principal = auth.getPrincipal();
 
-        if (principal instanceof OAuth2User) {
-            OAuth2User oAuth2User = (OAuth2User) principal;
+        if (principal instanceof OAuth2User oAuth2User) {
+            Long githubId = ((Number) oAuth2User.getAttribute("id")).longValue();
+            String githubEmail = (String) oAuth2User.getAttribute("email");
+            String githubLogin = (String) oAuth2User.getAttribute("login");
+            
+            if (githubEmail == null || githubEmail.isBlank()) {
+                githubEmail = githubLogin + "@github.local";
+            }
+            
+            Optional<Map<String, Object>> existingUser = supabaseService.getUserByGithubId(githubId);
+            
+            if (existingUser.isEmpty()) {
+                Map<String, Object> newUser = new HashMap<>();
+                newUser.put("email", githubEmail);
+                newUser.put("github_name", githubLogin);
+                newUser.put("name", oAuth2User.getAttribute("name"));
+                newUser.put("avatar_url", oAuth2User.getAttribute("avatar_url"));
+                newUser.put("github_id", githubId);
+                newUser.put("type", "github");
+                
+                supabaseService.createUser(newUser);
+            }
+            
             response.put("name", oAuth2User.getAttribute("name"));
-            response.put("login", oAuth2User.getAttribute("login"));
-            response.put("email", oAuth2User.getAttribute("email"));
+            response.put("login", githubLogin);
+            response.put("email", githubEmail);
             response.put("avatar_url", oAuth2User.getAttribute("avatar_url"));
-            response.put("id", oAuth2User.getAttribute("id"));
+            response.put("id", githubId);
             response.put("type", "github");
         } else {
-            response.put("name", auth.getName());
-            response.put("email", auth.getName());
-            response.put("type", "email");
+            String email = auth.getName();
+            Optional<Map<String, Object>> user = supabaseService.getUserByEmail(email);
+            
+            if (user.isPresent()) {
+                Map<String, Object> userData = user.get();
+                response.put("name", userData.getOrDefault("name", email));
+                response.put("email", email);
+                response.put("type", userData.getOrDefault("type", "email"));
+            } else {
+                response.put("name", email);
+                response.put("email", email);
+                response.put("type", "email");
+            }
         }
 
         return response;
@@ -68,27 +92,3 @@ public class GithubController {
         return response;
     }
 }
-
-/*
- * ZUSAMMENFASSUNG - Was macht dieser Controller?
- *
- * 1. GET /api/user
- *    - Gibt Daten des eingeloggten GitHub-Users zurück
- *    - Spring injiziert automatisch OAuth2User
- *    - Wenn nicht eingeloggt: Error-Message
- *
- * 2. POST /api/logout
- *    - Gibt Success-Message zurück
- *    - ACHTUNG: Macht keinen echten Logout!
- *
- * WICHTIGE KONZEPTE:
- * - @AuthenticationPrincipal: Spring injiziert eingeloggten User
- * - OAuth2User: Interface mit allen OAuth2-User-Daten
- * - principal.getAttribute(): Holt Attribute vom OAuth2 Provider
- * - Spring konvertiert Map automatisch zu JSON
- *
- * WICHTIGE DOCS:
- * - OAuth2 User: https://docs.spring.io/spring-security/reference/servlet/oauth2/login/advanced.html
- * - REST Controller: https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller.html
- * - Authentication Principal: https://docs.spring.io/spring-security/reference/servlet/integrations/mvc.html
- */
