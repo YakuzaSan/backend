@@ -2,6 +2,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 interface FetchOptions extends RequestInit {
     includeCsrf?: boolean;
+    headers?: Record<string, string>;
 }
 
 async function fetchWithDefaults(
@@ -10,7 +11,7 @@ async function fetchWithDefaults(
 ): Promise<Response> {
     const { includeCsrf = true, headers = {}, ...rest } = options;
 
-    const defaultHeaders: HeadersInit = {
+    const defaultHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         ...headers,
     };
