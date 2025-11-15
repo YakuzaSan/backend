@@ -1,46 +1,34 @@
-import { useEffect, useState } from "react";
-import { useNavigate, Outlet } from "react-router";
-import { api } from "./utils/api";
-
-interface User {
-    name?: string;
-    login?: string;
-    email?: string;
-    avatar_url?: string;
-    id?: number;
-    type?: string;
-}
+import { Outlet } from "react-router";
+import { useAuth } from "./hooks/useAuth";
 
 export default function Dashboard() {
-    const [user, setUser] = useState<User | null>(null);
-    const navigate = useNavigate();
+    const { user, loading, logout } = useAuth();
 
-    useEffect(() => {
-        api
-            .get("/api/user")
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.error) {
-                    navigate("/");
-                } else {
-                    setUser(data);
-                }
-            })
-            .catch(() => navigate("/"));
-    }, [navigate]);
-
-    async function handleLogout() {
-        try {
-            await api.logout();
-            setUser(null);
-            navigate("/");
-        } catch (error) {
-            console.error("Logout error:", error);
-        }
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-gray-900">
+                <div className="text-center">
+                    <p className="text-white text-lg">Authentifizierung wird geprüft...</p>
+                    <div className="mt-4 flex justify-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     if (!user) {
-        return <p className="p-8">Loading...</p>;
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-gray-900">
+                <div className="text-center">
+                    <p className="text-red-400 text-lg">Authentifizierung erforderlich</p>
+                </div>
+            </div>
+        );
+    }
+
+    async function handleLogout() {
+        await logout();
     }
 
     return (

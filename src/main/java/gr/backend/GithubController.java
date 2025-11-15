@@ -6,10 +6,13 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import org.springframework.web.bind.annotation.*;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @RestController
@@ -35,9 +38,9 @@ public class GithubController {
         Object principal = auth.getPrincipal();
 
         if (principal instanceof OAuth2User oAuth2User) {
-            Long githubId = ((Number) oAuth2User.getAttribute("id")).longValue();
-            String githubEmail = (String) oAuth2User.getAttribute("email");
-            String githubLogin = (String) oAuth2User.getAttribute("login");
+            Long githubId = ((Number) Objects.requireNonNull(oAuth2User.getAttribute("id"))).longValue();
+            String githubEmail = oAuth2User.getAttribute("email");
+            String githubLogin = oAuth2User.getAttribute("login");
             
             if (githubEmail == null || githubEmail.isBlank()) {
                 githubEmail = githubLogin + "@github.local";
@@ -83,12 +86,12 @@ public class GithubController {
     }
 
     @PostMapping("/logout")
-    public Map<String, String> logout(HttpSession session) {
+    public Map<String, String> logout(HttpServletRequest request, HttpServletResponse response) {
         SecurityContextHolder.clearContext();
-        session.invalidate();
+        new SecurityContextLogoutHandler().logout(request, response, null);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Logged out successfully");
-        return response;
+        Map<String, String> logoutResponse = new HashMap<>();
+        logoutResponse.put("message", "Logged out successfully");
+        return logoutResponse;
     }
 }

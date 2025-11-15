@@ -37,6 +37,7 @@ public class LoginController {
         Optional<Map<String, Object>> existingUser = supabaseService.getUserByEmail(request.getEmail());
         if (existingUser.isPresent()) {
             response.put("error", "Email existiert bereits");
+            response.put("status", 409);
             return response;
         }
 
