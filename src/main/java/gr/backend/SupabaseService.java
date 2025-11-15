@@ -30,51 +30,13 @@ public class SupabaseService {
     }
     
     public Optional<Map<String, Object>> getUserByEmail(String email) {
-        try {
-            String url = supabaseUrl + "/rest/v1/users?email=eq." + email;
-            HttpHeaders headers = getHeaders();
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            
-            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(
-                url, 
-                org.springframework.http.HttpMethod.GET, 
-                entity, 
-                String.class
-            );
-            
-            java.util.List<Map<String, Object>> users = objectMapper.readValue(
-                response.getBody(), 
-                objectMapper.getTypeFactory().constructCollectionType(java.util.List.class, Map.class)
-            );
-            
-            return users.stream().findFirst();
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        String url = supabaseUrl + "/rest/v1/users?email=eq." + email;
+        return fetchUsersList(url);
     }
     
     public Optional<Map<String, Object>> getUserByGithubId(Long githubId) {
-        try {
-            String url = supabaseUrl + "/rest/v1/users?github_id=eq." + githubId;
-            HttpHeaders headers = getHeaders();
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            
-            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(
-                url, 
-                org.springframework.http.HttpMethod.GET, 
-                entity, 
-                String.class
-            );
-            
-            java.util.List<Map<String, Object>> users = objectMapper.readValue(
-                response.getBody(), 
-                objectMapper.getTypeFactory().constructCollectionType(java.util.List.class, Map.class)
-            );
-            
-            return users.stream().findFirst();
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        String url = supabaseUrl + "/rest/v1/users?github_id=eq." + githubId;
+        return fetchUsersList(url);
     }
     
     public Map<String, Object> createUser(Map<String, Object> userData) {
@@ -99,7 +61,7 @@ public class SupabaseService {
                 response.getBody(),
                 objectMapper.getTypeFactory().constructCollectionType(java.util.List.class, Map.class)
             );
-            
+
             return users.stream().findFirst().orElse(new java.util.HashMap<>());
         } catch (HttpClientErrorException e) {
             throw new RuntimeException("Failed to create user in Supabase: " + e.getResponseBodyAsString(), e);
@@ -107,22 +69,30 @@ public class SupabaseService {
             throw new RuntimeException("Failed to create user in Supabase: " + e.getMessage(), e);
         }
     }
-    
-    public Map<String, Object> updateUser(Long userId, Map<String, Object> userData) {
+
+    private Optional<Map<String, Object>> fetchUsersList(String url) {
         try {
-            String url = supabaseUrl + "/rest/v1/users?id=eq." + userId;
             HttpHeaders headers = getHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
             
-            String json = objectMapper.writeValueAsString(userData);
-            HttpEntity<String> entity = new HttpEntity<>(json, headers);
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(
+                url, 
+                org.springframework.http.HttpMethod.GET, 
+                entity, 
+                String.class
+            );
             
-            return restTemplate.patchForObject(url, entity, Map.class);
+            java.util.List<Map<String, Object>> users = objectMapper.readValue(
+                response.getBody(), 
+                objectMapper.getTypeFactory().constructCollectionType(java.util.List.class, Map.class)
+            );
+            
+            return users.stream().findFirst();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to update user in Supabase", e);
+            return Optional.empty();
         }
     }
-    
+
     private HttpHeaders getHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + supabaseApiKey);

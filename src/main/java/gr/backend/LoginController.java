@@ -48,20 +48,7 @@ public class LoginController {
 
             supabaseService.createUser(newUser);
 
-            Collection<GrantedAuthority> authorities = new ArrayList<>();
-            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-            
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    request.getEmail(),
-                    null,
-                    authorities
-            );
-            
-            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-            securityContext.setAuthentication(authentication);
-            SecurityContextHolder.setContext(securityContext);
-            
-            session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
+            setupSecurityContext(request.getEmail(), session);
 
             response.put("message", "Registrierung erfolgreich!");
             response.put("email", request.getEmail());
@@ -92,11 +79,19 @@ public class LoginController {
             return response;
         }
         
+        setupSecurityContext(request.getEmail(), session);
+
+        response.put("message", "Login erfolgreich!");
+        response.put("email", request.getEmail());
+        return response;
+    }
+
+    private void setupSecurityContext(String email, HttpSession session) {
         Collection<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
         
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                request.getEmail(),
+                email,
                 null,
                 authorities
         );
@@ -106,10 +101,6 @@ public class LoginController {
         SecurityContextHolder.setContext(securityContext);
         
         session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
-
-        response.put("message", "Login erfolgreich!");
-        response.put("email", request.getEmail());
-        return response;
     }
 
     public static class LoginRequest {
@@ -121,8 +112,10 @@ public class LoginController {
         private String password;
 
         public String getEmail() { return email; }
+        @SuppressWarnings("unused")
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
+        @SuppressWarnings("unused")
         public void setPassword(String password) { this.password = password; }
     }
 }
